@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const swipeIndicator = document.getElementById('swipeIndicator');
     const ratingScroll = document.getElementById('ratingScroll');
 
+    console.log('DOM загружен, ratingScroll:', ratingScroll);
+
     // Переменные для свайпа
     let startX = 0;
     let startY = 0;
@@ -26,35 +28,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Инициализация рейтинга
     function createRatingButtons() {
+        console.log('Создание кнопок рейтинга...');
+        
+        // Очищаем контейнер
+        ratingScroll.innerHTML = '';
+        
         for (let i = -5; i <= 5; i++) {
             const button = document.createElement('button');
-            button.className = `rating-btn ${i < 0 ? 'negative' : i > 0 ? 'positive' : 'zero'}`;
+            let ratingClass = '';
+            
+            if (i < 0) {
+                ratingClass = 'negative';
+            } else if (i > 0) {
+                ratingClass = 'positive';
+            } else {
+                ratingClass = 'zero';
+            }
+            
+            button.className = `rating-btn ${ratingClass}`;
             button.textContent = i > 0 ? `+${i}` : i.toString();
             button.dataset.rating = i;
+            button.title = `Оценка: ${i}`;
             
             button.addEventListener('click', function() {
                 setRating(i);
             });
             
             ratingScroll.appendChild(button);
+            console.log('Создана кнопка:', i);
         }
         
         setRating(0);
+        console.log('Все кнопки созданы, всего:', ratingScroll.children.length);
     }
 
     function setRating(rating) {
+        console.log('Установка рейтинга:', rating);
+        
+        // Убираем активный класс со всех кнопок
         document.querySelectorAll('.rating-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         
+        // Добавляем активный класс выбранной кнопке
         const selectedBtn = document.querySelector(`.rating-btn[data-rating="${rating}"]`);
         if (selectedBtn) {
             selectedBtn.classList.add('active');
+            console.log('Активная кнопка найдена:', selectedBtn);
+        } else {
+            console.log('Кнопка не найдена для рейтинга:', rating);
         }
         
         currentRating = rating;
-        console.log('Выбран рейтинг:', rating);
         
+        // Прокручиваем к выбранному рейтингу
         if (selectedBtn) {
             selectedBtn.scrollIntoView({
                 behavior: 'smooth',
@@ -64,180 +91,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Обработчики свайпа
-    function handleTouchStart(e) {
-        const touch = e.touches[0];
-        startX = touch.clientX;
-        startY = touch.clientY;
-        isSwiping = true;
-        e.preventDefault();
-    }
-    
-    function handleTouchMove(e) {
-        if (!isSwiping) return;
-        
-        const touch = e.touches[0];
-        const diffX = touch.clientX - startX;
-        const diffY = touch.clientY - startY;
-        
-        if (Math.abs(diffY) > Math.abs(diffX)) {
-            isSwiping = false;
-            return;
-        }
-        
-        e.preventDefault();
-    }
-    
-    function handleTouchEnd(e) {
-        if (!isSwiping) return;
-        
-        const touch = e.changedTouches[0];
-        const diffX = touch.clientX - startX;
-        
-        if (Math.abs(diffX) > swipeThreshold) {
-            if (diffX > 0) {
-                skipForward();
-                showSwipeIndicator('⏩ +10 сек');
-            } else {
-                skipBackward();
-                showSwipeIndicator('⏪ -10 сек');
-            }
-        }
-        
-        isSwiping = false;
-    }
-    
-    function handleMouseDown(e) {
-        startX = e.clientX;
-        startY = e.clientY;
-        isSwiping = true;
-    }
-    
-    function handleMouseMove(e) {
-        if (!isSwiping) return;
-        
-        const diffX = e.clientX - startX;
-        const diffY = e.clientY - startY;
-        
-        if (Math.abs(diffY) > Math.abs(diffX)) {
-            isSwiping = false;
-            return;
-        }
-    }
-    
-    function handleMouseUp(e) {
-        if (!isSwiping) return;
-        
-        const diffX = e.clientX - startX;
-        
-        if (Math.abs(diffX) > swipeThreshold) {
-            if (diffX > 0) {
-                skipForward();
-                showSwipeIndicator('⏩ +10 сек');
-            } else {
-                skipBackward();
-                showSwipeIndicator('⏪ -10 сек');
-            }
-        }
-        
-        isSwiping = false;
-    }
-
-    function skipForward() {
-        video.currentTime = Math.min(video.duration, video.currentTime + skipTime);
-    }
-    
-    function skipBackward() {
-        video.currentTime = Math.max(0, video.currentTime - skipTime);
-    }
-    
-    function showSwipeIndicator(text) {
-        swipeIndicator.textContent = text;
-        swipeIndicator.classList.add('show');
-        
-        setTimeout(() => {
-            swipeIndicator.classList.remove('show');
-        }, 1500);
-    }
-
-    // Управление видео
-    function togglePlay() {
-        if (video.paused || video.ended) {
-            video.play();
-            playPauseBtn.textContent = '⏸️';
-        } else {
-            video.pause();
-            playPauseBtn.textContent = '▶️';
-        }
-    }
-
-    function updateProgress() {
-        const percent = (video.currentTime / video.duration) * 100;
-        progressBar.style.width = `${percent}%`;
-        
-        const currentMinutes = Math.floor(video.currentTime / 60);
-        const currentSeconds = Math.floor(video.currentTime % 60);
-        const durationMinutes = Math.floor(video.duration / 60);
-        const durationSeconds = Math.floor(video.duration % 60);
-        
-        timeDisplay.textContent = 
-            `${currentMinutes}:${currentSeconds < 10 ? '0' : ''}${currentSeconds} / ${durationMinutes}:${durationSeconds < 10 ? '0' : ''}${durationSeconds}`;
-    }
-    
-    function setProgress(e) {
-        const width = this.clientWidth;
-        const clickX = e.offsetX;
-        const duration = video.duration;
-        
-        video.currentTime = (clickX / width) * duration;
-        e.stopPropagation();
-    }
-
-    function toggleMute() {
-        video.muted = !video.muted;
-        muteBtn.textContent = video.muted ? '🔇' : '🔊';
-        updateVolumeDisplay();
-    }
-    
-    function setVolume(e) {
-        const width = this.clientWidth;
-        const clickX = e.offsetX;
-        const volume = clickX / width;
-        
-        video.volume = volume;
-        video.muted = volume === 0;
-        muteBtn.textContent = volume === 0 ? '🔇' : '🔊';
-        updateVolumeDisplay();
-        e.stopPropagation();
-    }
-    
-    function updateVolumeDisplay() {
-        const volume = video.muted ? 0 : video.volume;
-        volumeLevel.style.width = `${volume * 100}%`;
-    }
-
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            document.exitFullscreen();
-        }
-    }
-
-    // Скрытие контролов
-    let controlsTimeout;
-    function showControls() {
-        controls.style.opacity = '1';
-        clearTimeout(controlsTimeout);
-        controlsTimeout = setTimeout(() => {
-            if (!video.paused) {
-                controls.style.opacity = '0';
-            }
-        }, 3000);
-    }
+    // ... остальной код без изменений ...
 
     // Инициализация
     function init() {
+        console.log('Инициализация приложения...');
         createRatingButtons();
         
         // Автовоспроизведение
@@ -277,7 +135,40 @@ document.addEventListener('DOMContentLoaded', function() {
         video.addEventListener('ended', function() {
             playPauseBtn.textContent = '▶️';
         });
+        
+        console.log('Приложение инициализировано');
     }
+
+    // В функции init() после createRatingButtons() добавьте:
+function init() {
+    console.log('Инициализация приложения...');
+    createRatingButtons();
+    
+    // Проверка видимости рейтинга
+    setTimeout(() => {
+        const ratingContainer = document.querySelector('.rating-container');
+        const ratingButtons = document.querySelectorAll('.rating-btn');
+        
+        console.log('Контейнер рейтинга:', ratingContainer);
+        console.log('Кнопки рейтинга:', ratingButtons.length);
+        console.log('Стили контейнера:', {
+            display: ratingContainer.style.display,
+            visibility: ratingContainer.style.visibility,
+            opacity: ratingContainer.style.opacity,
+            zIndex: ratingContainer.style.zIndex,
+            position: ratingContainer.style.position
+        });
+        
+        // Принудительно делаем видимым
+        if (ratingContainer) {
+            ratingContainer.style.display = 'block';
+            ratingContainer.style.visibility = 'visible';
+            ratingContainer.style.opacity = '1';
+        }
+    }, 1000);
+    
+    // ... остальной код инициализации
+}
 
     // Запуск приложения
     init();

@@ -1,0 +1,134 @@
+/* Стили для рейтинга - исправленная версия */
+.rating-container {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95%;
+    max-width: 600px;
+    background: rgba(0, 0, 0, 0.95);
+    border-radius: 30px;
+    padding: 20px;
+    z-index: 10000; /* Очень высокий z-index */
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.rating-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 10px 5px;
+    min-height: 70px;
+    align-items: center;
+}
+
+.rating-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.rating-btn {
+    flex: 0 0 auto;
+    width: 55px;
+    height: 55px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 1.3rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.rating-btn:hover {
+    transform: scale(1.15);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.rating-btn.active {
+    background: linear-gradient(45deg, #ff3366, #ff6b35);
+    transform: scale(1.2);
+    box-shadow: 0 8px 25px rgba(255, 51, 102, 0.6);
+    border: 3px solid #ffffff;
+}
+
+.rating-btn.negative {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+}
+
+.rating-btn.positive {
+    background: linear-gradient(135deg, #51cf66, #2f9e44);
+}
+
+.rating-btn.zero {
+    background: linear-gradient(135deg, #74b9ff, #0984e3);
+}
+
+.rating-label {
+    text-align: center;
+    color: white;
+    font-size: 1.1rem;
+    margin-top: 12px;
+    opacity: 0.9;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Гарантируем, что ничего не перекрывает рейтинг */
+.controls {
+    bottom: 160px !important; /* Поднимаем контролы выше */
+    z-index: 100;
+}
+
+.swipe-area {
+    z-index: 1; /* Понижаем z-index области свайпа */
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+    .rating-container {
+        bottom: 20px;
+        width: 92%;
+        padding: 15px;
+    }
+    
+    .rating-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    
+    .rating-scroll {
+        gap: 10px;
+        min-height: 60px;
+    }
+    
+    .controls {
+        bottom: 140px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .rating-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+    
+    .rating-scroll {
+        gap: 8px;
+    }
+    
+    .rating-label {
+        font-size: 1rem;
+    }
+}
