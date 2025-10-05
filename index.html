@@ -15,6 +15,7 @@
             background: #000;
             overflow: hidden;
             height: 100vh;
+            touch-action: pan-y;
         }
         
         .video-container {
@@ -29,7 +30,7 @@
         .video-player {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: cover;
         }
         
         .controls {
@@ -44,6 +45,7 @@
             gap: 15px;
             opacity: 0;
             transition: opacity 0.3s;
+            pointer-events: none; /* Важно: контролы не блокируют события */
         }
         
         .controls:hover {
@@ -59,10 +61,11 @@
             padding: 10px;
             border-radius: 50%;
             transition: all 0.3s;
+            pointer-events: auto; /* Кнопки кликабельны */
         }
         
         .control-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
         }
         
         .progress-container {
@@ -71,6 +74,7 @@
             background: rgba(255, 255, 255, 0.3);
             border-radius: 3px;
             cursor: pointer;
+            pointer-events: auto; /* Прогресс-бар кликабелен */
         }
         
         .progress-bar {
@@ -91,6 +95,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            pointer-events: auto; /* Контролы громкости кликабельны */
         }
         
         .volume-slider {
@@ -107,18 +112,57 @@
             border-radius: 3px;
             width: 100%;
         }
+        
+        .swipe-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            display: none;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .swipe-indicator.show {
+            display: block;
+            animation: fadeOut 1s ease-in-out 0.5s forwards;
+        }
+        
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+            }
+        }
+        
+        /* Область для свайпов - покрывает весь экран */
+        .swipe-area {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>
-    <div class="video-container">
-        <video class="video-player" id="videoPlayer">
+    <div class="swipe-area" id="swipeArea"></div>
+    
+    <div class="video-container" id="videoContainer">
+        <video class="video-player" id="videoPlayer" autoplay muted>
             <!-- ВСТАВЬТЕ ВАШУ ССЫЛКУ НА ВИДЕО -->
             <source src="https://api.telegram.org/file/bot8228104804:AAG5ngi3-TGe3eIIP1PT7-L7Zky3AuLtW4s/videos/file_1.MOV" type="video/mp4">
         </video>
     </div>
     
     <div class="controls" id="controls">
-        <button class="control-btn" id="playPauseBtn">▶️</button>
+        <button class="control-btn" id="playPauseBtn">⏸️</button>
         <div class="progress-container" id="progressContainer">
             <div class="progress-bar" id="progressBar"></div>
         </div>
@@ -133,6 +177,8 @@
         
         <button class="control-btn" id="fullscreenBtn">⛶</button>
     </div>
+    
+    <div class="swipe-indicator" id="swipeIndicator"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -146,9 +192,127 @@
             const volumeLevel = document.getElementById('volumeLevel');
             const fullscreenBtn = document.getElementById('fullscreenBtn');
             const controls = document.getElementById('controls');
+            const swipeArea = document.getElementById('swipeArea');
+            const swipeIndicator = document.getElementById('swipeIndicator');
+            
+            // Переменные для свайпа
+            let startX = 0;
+            let startY = 0;
+            let isSwiping = false;
+            const swipeThreshold = 50; // Минимальное расстояние свайпа
+            const skipTime = 10; // Секунды для перемотки
             
             // Автовоспроизведение
             video.play().catch(e => console.log('Автовоспроизведение заблокировано'));
+            
+            // Обработчики свайпа на отдельной области
+            swipeArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+            swipeArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+            swipeArea.addEventListener('touchend', handleTouchEnd);
+            
+            swipeArea.addEventListener('mousedown', handleMouseDown);
+            swipeArea.addEventListener('mousemove', handleMouseMove);
+            swipeArea.addEventListener('mouseup', handleMouseUp);
+            swipeArea.addEventListener('mouseleave', handleMouseUp);
+            
+            function handleTouchStart(e) {
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                isSwiping = true;
+                e.preventDefault();
+            }
+            
+            function handleTouchMove(e) {
+                if (!isSwiping) return;
+                
+                const touch = e.touches[0];
+                const diffX = touch.clientX - startX;
+                const diffY = touch.clientY - startY;
+                
+                // Если движение по вертикали больше, чем по горизонтали - это не свайп
+                if (Math.abs(diffY) > Math.abs(diffX)) {
+                    isSwiping = false;
+                    return;
+                }
+                
+                e.preventDefault();
+            }
+            
+            function handleTouchEnd(e) {
+                if (!isSwiping) return;
+                
+                const touch = e.changedTouches[0];
+                const diffX = touch.clientX - startX;
+                
+                if (Math.abs(diffX) > swipeThreshold) {
+                    if (diffX > 0) {
+                        // Свайп вправо - перемотка вперед
+                        skipForward();
+                        showSwipeIndicator('⏩ +10 сек');
+                    } else {
+                        // Свайп влево - перемотка назад
+                        skipBackward();
+                        showSwipeIndicator('⏪ -10 сек');
+                    }
+                }
+                
+                isSwiping = false;
+            }
+            
+            function handleMouseDown(e) {
+                startX = e.clientX;
+                startY = e.clientY;
+                isSwiping = true;
+            }
+            
+            function handleMouseMove(e) {
+                if (!isSwiping) return;
+                
+                const diffX = e.clientX - startX;
+                const diffY = e.clientY - startY;
+                
+                if (Math.abs(diffY) > Math.abs(diffX)) {
+                    isSwiping = false;
+                    return;
+                }
+            }
+            
+            function handleMouseUp(e) {
+                if (!isSwiping) return;
+                
+                const diffX = e.clientX - startX;
+                
+                if (Math.abs(diffX) > swipeThreshold) {
+                    if (diffX > 0) {
+                        skipForward();
+                        showSwipeIndicator('⏩ +10 сек');
+                    } else {
+                        skipBackward();
+                        showSwipeIndicator('⏪ -10 сек');
+                    }
+                }
+                
+                isSwiping = false;
+            }
+            
+            function skipForward() {
+                video.currentTime = Math.min(video.duration, video.currentTime + skipTime);
+            }
+            
+            function skipBackward() {
+                video.currentTime = Math.max(0, video.currentTime - skipTime);
+            }
+            
+            function showSwipeIndicator(text) {
+                swipeIndicator.textContent = text;
+                swipeIndicator.classList.add('show');
+                
+                // Убираем индикатор через 1.5 секунды
+                setTimeout(() => {
+                    swipeIndicator.classList.remove('show');
+                }, 1500);
+            }
             
             // Воспроизведение/пауза
             playPauseBtn.addEventListener('click', togglePlay);
@@ -187,6 +351,7 @@
                 const duration = video.duration;
                 
                 video.currentTime = (clickX / width) * duration;
+                e.stopPropagation(); // Предотвращаем срабатывание свайпа
             }
             
             // Громкость
@@ -208,6 +373,7 @@
                 video.muted = volume === 0;
                 muteBtn.textContent = volume === 0 ? '🔇' : '🔊';
                 updateVolumeDisplay();
+                e.stopPropagation(); // Предотвращаем срабатывание свайпа
             }
             
             function updateVolumeDisplay() {
